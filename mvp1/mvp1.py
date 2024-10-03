@@ -1,5 +1,5 @@
 '''
-Written by Alec Olson.
+Written by Alec Olson
 Last Edited 10/03/2024
 '''
 
