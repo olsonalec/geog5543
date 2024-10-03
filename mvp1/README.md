@@ -4,7 +4,7 @@
 The final iteration of this project is a program that will tell the user what city on Earth currently has the most similar weather conditions compared to the user's location.
 
 ## Solution
-The user will enter the name of their current city, and then the program will gather real-time weather data from thousands of cities around the globe. This data will include air temperature, wind speed, relative humidity, precipitation, and possibly other things. The program will generate a score for each city, with a higher score indicating that the city's weather is more similar to the user's city. Then, the program will return the name of the city with the highest score to the user, as well as the weather conditions in both cities.
+The user will enter the name of their current city, and then the program will gather real-time weather data from thousands of cities around the globe. This data will include air temperature, wind speed, relative humidity, precipitation, and possibly other things. The program will generate a score for each city, with a higher score indicating that the city's weather is more similar to the user's city. Then, the program will return the name of the city with the highest score, as well as the current weather conditions in both cities.
 
 ## Challenges
 1. Logistical: It will be logistically difficult to gather real-time weather data from locations around the world. The program will need to interact with many different governmental agencies' APIs (for example, NOAA in the U.S. and ECMWF in Europe) in order to build a representative sample of global weather conditions.
