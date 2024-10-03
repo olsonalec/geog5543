@@ -1,1 +1,1 @@
-# GEOG5543 Advanced Geocomputing
+# GEOG5543 Advanced Geocomputing, Fall 2024
