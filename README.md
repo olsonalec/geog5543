@@ -1,1 +1,1 @@
-# geog5543
+# GEOG5543 Advanced Geocomputing
