@@ -1,4 +1,4 @@
-# MVP 1: Finding Similar Weather in Different Locations on Earth
+# MVP 1: Real-time Search for Similar Weather in Different Locations on Earth
 
 ## Problem
 The final iteration of this project is a program that will tell the user what city on Earth currently has the most similar weather conditions compared to the user's location.
