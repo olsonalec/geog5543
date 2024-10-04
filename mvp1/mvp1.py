@@ -41,7 +41,8 @@ Section 3
 Iterate through all the Observation Stations and, if they return a valid response (200), grab the current temperature.
 '''
 stationTempList = []
-for station in stations[0:100]:
+print(f'There are {len(stations)} stations to compare.')
+for station in stations:
     weather = requests.get(f'https://api.weather.gov/stations/{station}/observations/latest')
     if weather.status_code == 200:
         weather = weather.json()
