@@ -4,6 +4,9 @@ Last Edited 10/03/2024
 '''
 
 import requests
+import time
+
+start_time = time.time()
 
 '''
 Section 1
@@ -68,3 +71,7 @@ closestStationName = requests.get(f'https://api.weather.gov/stations/{closestSta
 closestStationName = closestStationName['properties']['name']
 print(f'The current temperature at {closestStationName} is {closestTemp} degrees Celsius.')
 print(f'The current temperature at MSP airport is {mplsTemp} degrees Celsius.')
+
+
+end_time = time.time()
+print(f'The total time to compare 100 cities was {end_time - start_time} seconds.')
