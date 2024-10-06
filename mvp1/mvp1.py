@@ -8,6 +8,8 @@ import time
 
 start_time = time.time()
 
+current_time = time.asctime()
+
 '''
 Section 1
 Get the current temperature at the MSP airport and print this temp to the terminal.
@@ -28,11 +30,12 @@ zones = zones.json()
 
 stations = []
 for i in range(len(zones['features'])):
-    zoneID = zones['features'][i]['properties']['id']
-    observationStations = zones['features'][i]['properties']['observationStations']
-    if observationStations != []:
-        station = observationStations[0][33:]
-        stations.append(station)
+    if zones['features'][i]['properties']['state'] != 'MN':         # exclude MN weather stations from comparison
+        zoneID = zones['features'][i]['properties']['id']
+        observationStations = zones['features'][i]['properties']['observationStations']
+        if observationStations != []:
+            station = observationStations[0][33:]
+            stations.append(station)
 
 stations = list(set(stations))
 
@@ -101,14 +104,16 @@ Find the name of the location where the Observation Station is located.
 '''
 closestStation = stationWeatherList[0]
 closestStationID = closestStation[1]
-closestStationTemp = closestStation[2]
+closestStationTemp = closestStation[2] * 1.8 + 32       # convert to Fahrenheit
 closestStationHumidity = closestStation[3]
+
+mplsTemp = mplsTemp * 1.8 + 32      # convert to Fahrenheit
 
 closestStationName = requests.get(f'https://api.weather.gov/stations/{closestStationID}').json()
 closestStationName = closestStationName['properties']['name']
-print(f'The current weather at MSP airport is {mplsTemp} degrees Celsius with {round(mplsHumidity)}% humidity.\n')
+print(f'At {current_time}, the weather at MSP airport is {round(mplsTemp)} degrees Fahrenheit with {round(mplsHumidity)}% humidity.\n')
 print(f'The location with the most similar current weather is {closestStationName}.\n')
-print(f'The current weather at {closestStationName} is {closestStationTemp} degrees Celsius with {round(closestStationHumidity)}% humidity.\n')
+print(f'The current weather at {closestStationName} is {round(closestStationTemp)} degrees Fahrenheit with {round(closestStationHumidity)}% humidity.\n')
 
 
 end_time = time.time()
