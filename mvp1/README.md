@@ -21,7 +21,7 @@ Humidity receives only half the weight that air temperature does because I belie
 
 ## The Program
 `mvp1.py` features all the code for this MVP. It is divided into multiple sections.
-1. The first block of code gathers the current weather conditions in Minneapolis and prints the current temperature to the terminal.
+1. The first block of code gathers the current weather conditions in Minneapolis.
 2. The second block finds all the NOAA-defined zones in the U.S. and the weather Observation Stations that are in those zones.
 3. The third block gathers the current weather conditions from each Observation Station.
 4. The fourth block finds the Observation Station that has the most similar weather compared to Minneapolis.

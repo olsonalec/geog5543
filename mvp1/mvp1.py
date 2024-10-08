@@ -12,7 +12,7 @@ current_time = time.asctime()
 
 '''
 Section 1
-Get the current temperature at the MSP airport and print this temp to the terminal.
+Get the current temperature and relative humidity at the MSP airport.
 '''
 mpls = requests.get('https://api.weather.gov/stations/KMSP/observations/latest')
 mpls = mpls.json()
@@ -83,34 +83,24 @@ for station in stationWeatherList:
 # sort the list of weather stations so that the most similar station is at the front of the list
 stationWeatherList.sort()
 
-# '''
-# Section 4
-# Find the Observation Station that has a temperature most similar to MSP airport.
-# '''
-# closestTemp = 1000
-# closestTempDiff = 1000
-# closestStation = ''
-# for station in stationWeatherList:
-#     # calculate absolute difference in temp
-#     tempDiff = mplsTemp - station[2]
-#     if abs(tempDiff) < abs(closestTempDiff):
-#         closestStation = station[1]
-#         closestTemp = station[2]
-#         closestTempDiff = tempDiff
         
 '''
 Section 5
 Find the name of the location where the Observation Station is located.
+Print out the current weather at MSP airport.
+Print out the other Observation Station's name and its current weather.
 '''
+
 closestStation = stationWeatherList[0]
 closestStationID = closestStation[1]
-closestStationTemp = closestStation[2] * 1.8 + 32       # convert to Fahrenheit
+closestStationTemp = closestStation[2] * 1.8 + 32       # convert Celsius to Fahrenheit
 closestStationHumidity = closestStation[3]
-
-mplsTemp = mplsTemp * 1.8 + 32      # convert to Fahrenheit
 
 closestStationName = requests.get(f'https://api.weather.gov/stations/{closestStationID}').json()
 closestStationName = closestStationName['properties']['name']
+
+mplsTemp = mplsTemp * 1.8 + 32      # convert Celsius to Fahrenheit
+
 print(f'At {current_time}, the weather at MSP airport is {round(mplsTemp)} degrees Fahrenheit with {round(mplsHumidity)}% humidity.\n')
 print(f'The location with the most similar current weather is {closestStationName}.\n')
 print(f'The current weather at {closestStationName} is {round(closestStationTemp)} degrees Fahrenheit with {round(closestStationHumidity)}% humidity.\n')
