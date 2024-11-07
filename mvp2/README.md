@@ -16,3 +16,11 @@ This MVP will identify precincts in Minnesota where there are relatively large n
 ## The Program
 `mvp2.ipynb` features all the code for this MVP.\
 The program first reads in a GeoJSON file containing precinct boundaries in Minnesota. This file is converted into a GeoPandas GeoDataFrame. Next, precinct-level results from the 2020 presidential, Senate, and House elections are added to this GeoDataFrame. Then, the program searches for precincts that have a relative high percentage of split ballots. Finally, the program finds which counties have the highest population of voters who live in precincts that have a high percentage of split ballots.
+
+## Credits
+
+2020 Presidential election results by precinct in Minnesota:
+https://www.sos.state.mn.us/elections-voting/election-results/2020/2020-general-election-results/2020-precinct-results-spreadsheet/
+
+2019 Minnesota voting precincts GeoJSON (I had to use Web Archive because the current GeoJSON file available on the MN Secretary of State’s website has 2024 precincts, some of which have changed since 2020):
+https://web.archive.org/web/20210510102449/https://www.sos.state.mn.us/media/2791/mn-precincts.json
