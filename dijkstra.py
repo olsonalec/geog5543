@@ -8,8 +8,8 @@ roads_gpd = gpd.read_file('roads_prepped.json')
 intersections_gpd = gpd.read_file('intersections_prepped.json')
 
 
-source = 741     # an intersection
-dest = 1708       # an intersection
+source = 2483     # an intersection
+dest = 991       # an intersection
 
 # print(intersections_gpd.loc[source])
 
@@ -78,17 +78,17 @@ Parameter:
     list_of_vertices (list) - a list of Vertex objects
 
 Return Value:
-    min_value_idx (int) - the index of the minimum element in the list
+    min_vertex (Vertex) - the Vertex object that has the lowest travel cost in the list
 '''
 def find_min(list_of_vertices):
     min_value = float("inf")
-    min_value_idx = -1
+    min_vertex = None
     n = len(list_of_vertices)
     for i in range(n):
         if list_of_vertices[i].cost < min_value:
             min_value = list_of_vertices[i].cost
-            min_value_idx = i
-    return min_value_idx
+            min_vertex = list_of_vertices[i]
+    return min_vertex
 
 '''
 The 'Intersections' and 'Roads' attributes in the Roads and Intersections Geodataframes, respectively, are represented as a nested list.
@@ -142,16 +142,15 @@ def Dijkstra(graph, dest):
     visited_intersections = []  # a list containing all the Vertex objects that have been visited so far
     chosen_roads = []           # a list containing indicies for all the roads for the route
     while dest not in visited_vertices:
-        min_value_idx = find_min(graph)
-        vertex = graph[min_value_idx]
+        min_vertex = find_min(graph)        # find the Vertex in the graph with the lowest travel cost
 
         # update distances to the neighbor nodes
-        neighbors = vertex.connections
+        neighbors = min_vertex.connections
         for neighbor, road in neighbors.items():
-            new_cost = vertex.cost + road.travel_time
+            new_cost = min_vertex.cost + road.travel_time
             if new_cost < neighbor.cost:
                 neighbor.cost = new_cost
-                neighbor.prev = vertex
+                neighbor.prev = min_vertex
         
         # find the neighbor with the lowest cost
         # lowest_cost = float("inf")
@@ -160,83 +159,28 @@ def Dijkstra(graph, dest):
         #     if cost < lowest_cost:
         #         lowest_cost = cost
         #         lowest_cost_neighbor = neighbor
-
-
-        # neighbor_roads = intersections_gpd.loc[vertex.index]['Roads']
-        # neighbor_roads = convert_string_to_list(neighbor_roads)
-        # neighbor_intersections = {}     # each key is an intersection that is reachable by the current vertex; each value is the cost to get there
-        # for road in neighbor_roads:
-            # road_cost = roads_gpd.loc[road]['TimeToTravel']
-            # new_cost = road_cost + vertex.cost
-            # intersections = vertex.connections
-            # intersections = roads_gpd.loc[road]['Intersections']
-            # intersections = convert_string_to_list(intersections)
-            # for i in range(len(intersections)):
-                # if (intersections[i].index != vertex.index) and (intersections[i].index not in neighbor_intersections):
-                    # neighbor_intersections[intersections[i].index] = new_cost
-                    # neighbor_intersections.append(intersections[i])
-            # print(f'intersections: {neighbor_intersections}')
-        # neighbors = roads_gpd.loc[vertex.index]['Intersections']      # get the list of neighbor nodes from the roads_gpd
-        
-        # convert neighbors into a 1D list and remove the current node from the list
-        # neighbors = ast.literal_eval(neighbors)
-        # neighbors = neighbors[0]
-        # neighbors.remove(vertex.index)
-
-        # for each neighbor node, update the cost (and it's previous Vertex) if it's less than the current cost
-        # current_cost = vertex.cost
-        # for key, value in neighbor_intersections.items():
-        #     old_cost = graph[key].cost
-        #     if value < old_cost:
-        #         vertex.cost = new_cost
-        #         vertex.prev = key
-        # for i in range(len(neighbor_intersections)):
-        #     new_cost = neighbor_intersections
-        #     new_cost = roads_gpd.loc[vertex.index]['TimeToTravel'] + current_cost
-        #     if new_cost < graph[neighbor_intersections[i]].cost:
-        #         graph[neighbor_intersections[i]].cost = new_cost
-        #         graph[neighbor_intersections[i]].prev = vertex.index
-        
-        # find the neighbor with the lowest cost
-        # lowest_cost = float("inf")
-        # lowest_cost_vertex = -1
-        # for key, value in neighbor_intersections.items():
-        #     if graph[key].cost < lowest_cost:
-        #         lowest_cost = graph[key].cost
-        #         lowest_cost_vertex = graph[key]
-
-        # for i in range(len(neighbor_intersections)):
-        #     if graph[neighbor_intersections[i]].cost < lowest_cost:
-        #         lowest_cost = graph[neighbor_intersections[i]].cost
-        #         lowest_cost_vertex = neighbor_intersections[i]
         
         # add the current node to the set of visited nodes
-        visited_vertices.append(vertex.index)
-        visited_intersections.append(vertex)
-        chosen_roads.append(vertex.connections)
+        visited_vertices.append(min_vertex.index)
+        visited_intersections.append(min_vertex)
+        chosen_roads.append(min_vertex.connections)
 
-
-        # remove the current node from the set of unvisited nodes
-        graph.pop(min_value_idx)
+        # remove the current vertex from the set of unvisited nodes
+        graph.remove(min_vertex)
     
     return visited_intersections
     
-        
+
 list_of_vertices = initialize_vertices(intersections_gpd, source)
 initialize_ints(intersections_gpd, roads_gpd, list_of_vertices)
 
 start_time = time.time()
-visited_vertices = Dijkstra(list_of_vertices, source, dest)
+visited_vertices = Dijkstra(list_of_vertices, dest)
 end_time = time.time()
 
-print('Path: ', end='')
-# for i in range(len(visited_vertices)):
-#     print(f'{visited_vertices[i].index} {visited_vertices[i].cost}')
-
-# print()
-
-chosen_vertices = []
-chosen_vertices_idxs = []
+# Find the shortest path
+chosen_vertices = []        # a list of Vertex objects that compose the shortest path
+chosen_vertices_idxs = []   # a list of indices into the intersections_gdb that compose the shortest path; this list is just used for graphing the vertices
 dest_idx = -1
 for i in range(len(visited_vertices)):
     if visited_vertices[i].index == dest:
@@ -246,13 +190,12 @@ for i in range(len(visited_vertices)):
 prev_intersection = visited_vertices[dest_idx].prev
 total_travel_time = visited_vertices[dest_idx].cost
 min, sec = convert_sec_to_min(total_travel_time)
+
+# Start with the destination Vertex and walk backwards until you've reached the source vertex
 while prev_intersection != None:
     chosen_vertices.append(prev_intersection)
     chosen_vertices_idxs.append(prev_intersection.index)
     prev_intersection = prev_intersection.prev
-
-# for i in range(len(chosen_vertices)):
-#     print(f'{chosen_vertices[i].index} {chosen_vertices[i].cost}')
 
 print(chosen_vertices_idxs)
 print(f'The time it will take to travel this route is {min} minutes and {sec} seconds.')
@@ -261,37 +204,8 @@ print(f'Time taken to run Dijkstra\'s Algorithm: {end_time - start_time}')
 
 fig, ax = plt.subplots()
 
-# intersections_gpd.plot(ax=ax)
-
 roads_gpd.plot(ax=ax)
 
 intersections_gpd.loc[chosen_vertices_idxs, 'geometry'].plot(ax=ax, color='r')
-
-
-
-# roads = intersections_gpd.loc[source]['Roads']      # these are the roads that connect to the source intersection
-# intersections_gpd.loc[[source], 'geometry'].plot(ax=ax)
-# roads = ast.literal_eval(roads)     # GeoPandas thinks that this nested list is a string; so we need to convert it into a list
-# roads_gpd.loc[roads[0], 'geometry'].plot(ax=ax)
-
-# for road in roads[0]:
-#     new_ints = roads_gpd.loc[road]['Intersections']
-#     new_ints = ast.literal_eval(new_ints)
-#     new_ints[0].remove(source)
-#     for int in new_ints[0]:
-#         new_roads = intersections_gpd.loc[int]['Roads']
-#         new_roads = ast.literal_eval(new_roads)
-#         print(new_roads)
-#         roads_gpd.loc[new_roads[0], 'geometry'].plot(ax=ax)
-#     intersections_gpd.loc[new_ints[0], 'geometry'].plot(ax=ax)
-
-# intersections = roads_gpd.loc[source]['Intersections']
-# print(intersections)
-# intersections = ast.literal_eval(intersections)     # GeoPandas thinks that this nested list is a string; so we need to convert it into a list
-# intersections_gpd.loc[intersections[0], 'geometry'].plot(ax=ax)
-# roads_gpd.loc[[source], 'geometry'].plot(ax=ax)
-# for intersection in intersections[0]:
-#     # print(intersection)
-#     intersections_gpd.loc[[intersection], 'geometry'].plot()
 
 plt.show()
