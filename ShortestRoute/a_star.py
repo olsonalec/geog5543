@@ -2,16 +2,15 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import ast
 import time
+import math
 
 
-roads_gpd = gpd.read_file('Ramsey_roads_prepped.geojson')
-intersections_gpd = gpd.read_file('Ramsey_intersections_prepped.geojson')
+roads_gpd = gpd.read_file('Ramsey_Roads_Prepped.geojson')
+intersections_gpd = gpd.read_file('Ramsey_Intersections_Prepped.geojson')
 
 
-source = 1791     # an intersection
-dest = 12863       # an intersection
-
-# print(intersections_gpd.loc[source])
+source = 2     # an intersection
+dest = 2000       # an intersection
 
 class Road:
     def __init__(self, index, cost, speed, start_x, start_y, end_x, end_y):
@@ -46,7 +45,7 @@ def initialize_vertices(gdf, source):
     vertex_list = []        # a list to store a Vertex object associated with each intersection
     for intersection in gdf.itertuples():
         index = intersection.Index
-        new_vertex = Vertex(index, intersection.POINT_X, intersection.POINT_Y)
+        new_vertex = Vertex(index, intersection.geometry.x, intersection.geometry.y)
         vertex_list.append(new_vertex)
 
     # Change the starting vertex's cost to 0
@@ -74,7 +73,12 @@ def initialize_ints(int_gdf, road_gdf, vertices):
             new_intersections = convert_string_to_list(new_intersections)
             for intersection in new_intersections:
                 if (intersection != vertex.index) and (intersection not in connections):
-                    connections[vertices[intersection]] = Road(road, road_gdf.loc[road]['TimeToTravel'], road_gdf.loc[road]['ROUTESPEED'], road_gdf.loc[road]['StartX'], road_gdf.loc[road]['StartY'], road_gdf.loc[road]['EndX'], road_gdf.loc[road]['EndY'])
+                    linestring_coordinates = list(road_gdf.loc[road].geometry.coords)
+                    start_x = linestring_coordinates[0][0]
+                    start_y = linestring_coordinates[0][1]
+                    end_x = linestring_coordinates[-1][0]
+                    end_y = linestring_coordinates[-1][1]
+                    connections[vertices[intersection]] = Road(road, road_gdf.loc[road]['TimeToTravel'], road_gdf.loc[road]['ROUTESPEED'], start_x, start_y, end_x, end_y)
                     # connections.append(vertices[intersection])
             vertex.connections = connections
     
@@ -126,9 +130,13 @@ Return Values:
     sec (int) - an integer representing the number of seconds
 '''
 def convert_sec_to_min(seconds):
-    min = int(seconds // 60)
-    sec = int(seconds % 60)
-    return min, sec    
+    return math.ceil(seconds / 60)
+    # min = int(seconds // 60)
+    # sec = int(seconds % 60)
+    # return min, sec
+
+def add_buffer_time(minutes):
+    return math.ceil(minutes * 1.1)  
 
 def calculate_distance(start_x, start_y, end_x, end_y):
     return ((((start_x - end_x) **2) + (start_y - end_y) ** 2) ** 0.5)
@@ -182,30 +190,30 @@ def a_star(graph, dest, dest_x, dest_y):
         # remove the current vertex from the set of unvisited nodes
         graph.remove(min_vertex)
     
-    return visited_intersections
+    return visited_intersections, visited_vertices
     
 
 list_of_vertices = initialize_vertices(intersections_gpd, source)
 initialize_ints(intersections_gpd, roads_gpd, list_of_vertices)
 
 start_time = time.time()
-dest_x = intersections_gpd.loc[dest, 'POINT_X']
-dest_y = intersections_gpd.loc[dest, 'POINT_Y']
-visited_vertices = a_star(list_of_vertices, dest, dest_x, dest_y)
+dest_x = intersections_gpd.loc[dest, 'geometry'].x
+dest_y = intersections_gpd.loc[dest, 'geometry'].y
+visited_intersections, visited_vertices = a_star(list_of_vertices, dest, dest_x, dest_y)
 end_time = time.time()
 
 # Find the shortest path
 chosen_vertices = []        # a list of Vertex objects that compose the shortest path
-chosen_vertices_idxs = []   # a list of indices into the intersections_gdb that compose the shortest path; this list is just used for graphing the vertices
+chosen_vertices_idxs = [dest]   # a list of indices into the intersections_gdb that compose the shortest path; this list is just used for graphing the vertices
 dest_idx = -1
-for i in range(len(visited_vertices)):
-    if visited_vertices[i].index == dest:
+for i in range(len(visited_intersections)):
+    if visited_intersections[i].index == dest:
         dest_idx = i
         break
 
-prev_intersection = visited_vertices[dest_idx].prev
-total_travel_time = visited_vertices[dest_idx].cost
-min, sec = convert_sec_to_min(total_travel_time)
+prev_intersection = visited_intersections[dest_idx].prev
+total_travel_time = visited_intersections[dest_idx].cost
+minutes = convert_sec_to_min(total_travel_time)
 
 # Start with the destination Vertex and walk backwards until you've reached the source vertex
 while prev_intersection != None:
@@ -213,15 +221,20 @@ while prev_intersection != None:
     chosen_vertices_idxs.append(prev_intersection.index)
     prev_intersection = prev_intersection.prev
 
-print(chosen_vertices_idxs)
-print(f'The time it will take to travel this route is {min} minutes and {sec} seconds.')
-print(f'Time taken to run the A* Algorithm: {end_time - start_time} seconds')
+print(f'The time it will take to travel this route is approximately {add_buffer_time(minutes)} minutes.')
+print(f'Time taken to run the A* Algorithm: {end_time - start_time} seconds\n')
 
+print(f'Total number of intersections: {intersections_gpd.shape[0]}')
+print(f'Total number of intersections visited by the A* algorithm: {len(visited_vertices)}\n')
 
 fig, ax = plt.subplots()
 
 roads_gpd.plot(ax=ax)
 
+# Plot the intersections that were chosen to create the fastest route
 intersections_gpd.loc[chosen_vertices_idxs, 'geometry'].plot(ax=ax, color='r')
+
+# Plot all the intersections that were visited by the A* algorithm
+# intersections_gpd.loc[visited_vertices, 'geometry'].plot()
 
 plt.show()

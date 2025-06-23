@@ -2,16 +2,17 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import ast
 import time
+import math
+
+start_time = time.time()
+roads_gpd = gpd.read_file('Ramsey_Roads_Prepped.geojson')
+intersections_gpd = gpd.read_file('Ramsey_Intersections_Prepped.geojson')
+end_time = time.time()
+print(f'Time to read the geojson files: {end_time - start_time}')
 
 
-roads_gpd = gpd.read_file('roads_prepped2.geojson')
-intersections_gpd = gpd.read_file('intersections_prepped2.geojson')
-
-
-source = 2483     # an intersection
-dest = 991       # an intersection
-
-# print(intersections_gpd.loc[source])
+source = 2     # an intersection
+dest = 2000       # an intersection
 
 class Road:
     def __init__(self, index, cost):
@@ -119,9 +120,13 @@ Return Values:
     sec (int) - an integer representing the number of seconds
 '''
 def convert_sec_to_min(seconds):
-    min = int(seconds // 60)
-    sec = int(seconds % 60)
-    return min, sec    
+    return math.ceil(seconds / 60)
+    # min = int(seconds // 60)
+    # sec = int(seconds % 60)
+    # return min, sec
+
+def add_buffer_time(minutes):
+    return math.ceil(minutes * 1.1)
 
 '''
 A function to find the shortest path between two intersections.
@@ -152,14 +157,6 @@ def Dijkstra(graph, dest):
                 neighbor.cost = new_cost
                 neighbor.prev = min_vertex
         
-        # find the neighbor with the lowest cost
-        # lowest_cost = float("inf")
-        # lowest_cost_neighbor = None
-        # for neighbor, cost in neighbors.items():
-        #     if cost < lowest_cost:
-        #         lowest_cost = cost
-        #         lowest_cost_neighbor = neighbor
-        
         # add the current node to the set of visited nodes
         visited_vertices.append(min_vertex.index)
         visited_intersections.append(min_vertex)
@@ -168,28 +165,30 @@ def Dijkstra(graph, dest):
         # remove the current vertex from the set of unvisited nodes
         graph.remove(min_vertex)
     
-    return visited_intersections
+    return visited_intersections, visited_vertices
     
-
+start_time = time.time()
 list_of_vertices = initialize_vertices(intersections_gpd, source)
 initialize_ints(intersections_gpd, roads_gpd, list_of_vertices)
+end_time = time.time()
+print(f'Time to initialize vertices: {end_time - start_time}\n')
 
 start_time = time.time()
-visited_vertices = Dijkstra(list_of_vertices, dest)
+visited_intersections, visited_vertices = Dijkstra(list_of_vertices, dest)
 end_time = time.time()
 
 # Find the shortest path
 chosen_vertices = []        # a list of Vertex objects that compose the shortest path
-chosen_vertices_idxs = []   # a list of indices into the intersections_gdb that compose the shortest path; this list is just used for graphing the vertices
+chosen_vertices_idxs = [dest]   # a list of indices into the intersections_gdb that compose the shortest path; this list is just used for graphing the vertices
 dest_idx = -1
-for i in range(len(visited_vertices)):
-    if visited_vertices[i].index == dest:
+for i in range(len(visited_intersections)):
+    if visited_intersections[i].index == dest:
         dest_idx = i
         break
 
-prev_intersection = visited_vertices[dest_idx].prev
-total_travel_time = visited_vertices[dest_idx].cost
-min, sec = convert_sec_to_min(total_travel_time)
+prev_intersection = visited_intersections[dest_idx].prev
+total_travel_time = visited_intersections[dest_idx].cost
+minutes = convert_sec_to_min(total_travel_time)
 
 # Start with the destination Vertex and walk backwards until you've reached the source vertex
 while prev_intersection != None:
@@ -197,15 +196,22 @@ while prev_intersection != None:
     chosen_vertices_idxs.append(prev_intersection.index)
     prev_intersection = prev_intersection.prev
 
-print(chosen_vertices_idxs)
-print(f'The time it will take to travel this route is {min} minutes and {sec} seconds.')
-print(f'Time taken to run Dijkstra\'s Algorithm: {end_time - start_time}')
+
+print(f'The time it will take to travel this route is approximately {add_buffer_time(minutes)} minutes.')
+print(f'Time taken to run Dijkstra\'s Algorithm: {end_time - start_time} seconds\n')
 
 
 fig, ax = plt.subplots()
 
 roads_gpd.plot(ax=ax)
 
+# Plot the intersections that were chosen to create the fastest route
 intersections_gpd.loc[chosen_vertices_idxs, 'geometry'].plot(ax=ax, color='r')
+
+# Plot all the intersections that were visited by Dijkstra's algorithm
+# intersections_gpd.loc[visited_vertices, 'geometry'].plot()
+
+print(f'Total number of intersections: {intersections_gpd.shape[0]}')
+print(f'Number of intersections visited by Dijkstra\'s algorithm: {len(visited_vertices)}\n')
 
 plt.show()
