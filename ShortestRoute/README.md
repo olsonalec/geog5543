@@ -1,31 +1,25 @@
-Workflow:
+`dijkstra_overhaul_naive.py`
+- This script implements Dijkstra's Algorithm using a naive approach to store information about the vertices. It uses an unsorted list that does not grow or shrink. This means that, for every iteration of the algorithm where it searches for the vertex with the lowest cost, the algorithm has to conduct a linear search through the list, resulting in a runtime of O(n) for each iteration. Not only that, but the search also has to check if each node has already been visited. This is also a linear time problem. If the node has already been visited, it is skipped because Dijkstra's Algorithm only visits each node once.
 
-Download Metro Road Centerlines from the Minnesota Geospatial Commons (https://gisdata.mn.gov/dataset/us-mn-state-metrogis-trans-road-centerlines-gac) as a shapefile.
 
-Open the shapefile in ArcGIS Pro.
+### Structure
+There are two main data structures used in this algorithm.
+1. `graph`
+    - This data structure represents the network of roads and intersections. It is implemented as a dictionary. Each key is an index that corresponds with an intersection in the intersections GeoDataFrame. Each value is a list of tuples. The first value of each tuple is an index that corresponds with another intersection in the intersections GeoDataFrame - these are intersections that are one road segment away from the original intersection. The second value of each tuple is the weight (in this case, the number of seconds to travel) to reach that next intersection.
+2. `vertex_array`
+    - This array stores the current total cost to reach each intersection from the source intersection. It is implemented as a list, and each element is a `Vertex` object. Each `Vertex` object has three attributes:
+        - The cost to reach that vertex from the starting intersection. This attribute is initialized to `infinity` for each vertex except the starting vertex, which gets initialized to `0`.
+        - A pointer to the `Vertex` object that comes before this node in the path. This attribute is used to construct the shortest path to the destination intersection after Dijkstra's Algorithm is finished.
+        - The index into the intersections GeoDataFrame where the data about this intersection is stored.
 
-Delete all the roads that are not in the seven-county metro area.
+### Implementation of Dijkstra's Algorithm
+- This code follows the general implementation of Dijkstra's Algorithm. I am not going to replicate the complete pseudocode here.
+- Briefly:
+    - The algorithm starts with the source intersection. Each neighboring intersection's cost is updated to reflect the cost of traveling there from the source intersection. The intersection with the lowest cost is selected to examine next. From this new intersection, its neighboring intersections are examined, and the cost to reach these neighbors is calculated. The process continues, and the intersection with the new lowest cost is selected to examine next. This process continues until the destination vertex is found.
+    - Dijkstra's Algorithm does not visit the same node twice. Therefore, it is important to keep track of which nodes have been visited. I accomplish this through the use of a list (`visited_vertices`) that contains the indices of the intersections that have already been visited. When the algorithm is searching for the intersection with the lowest cost, it must skip these intersections that have already been visited.
 
-Delete unnecessary attributes. Keep FID, Shape, ROUTE_ID, ST-CONCAT, CTU_NAME_L, CTU_NAME_R, ROUTESPEED, and Shape_Leng.
-
-Follow steps to add intersection points to the roads layer (https://support.esri.com/en-us/knowledge-base/how-to-create-points-on-line-intersections-in-arcgis-pr-000025044). In the "Statistics Fields," select all the attributes, except for Shape_Leng, and select "First" for all of them, with one exception. ROUTESPEED should be "Minimum." Run the tool, then remove the newly-added prefixes from the attribute names.
-
-Use the Multipart to Singlepart feature to get rid of multipart points.
-	Problem: Now there are some intersections that have two points associated with them.
-	Solution: Use "Add XY Coordinates" tool to add x and y values to the attribute table for the intersections layer.
-		  Use "Dissolve" tool on the x and y values to remove duplicate points. You don't need to add any of the attributes to the "Statistics 			  Fields" because it is not important to preserve any of them. Be sure to uncheck the box that says "Create multipart features."
-
-Manually remove intersections that are not possible (ex. 494 and Schmidt Lake Rd; 494 and Chankahda- even though the roads intersect on the 2D map, it is not possible to drive from one onto the other in real life.) Merge the affected road segments together.
-
-Use the "Calculate Geometry Attributes" features to add four attributes to each line segment: starting x coordinate, starting y coordinate, ending x coordinate, and ending y coordinate. Use the "Dissolve" tool on these four attributes to remove duplicate line segments. Do not allow the creation of multipart features. In the "Statistics Fields", select all the attributes and select "First" for the Statistic Type. This will preserve the other attributes through the dissolve operation. Uncheck the "Create multipart features" box.
-
-Manually remove intersections that don't exist. For example, on a 2D map, 494 intersects with Schmidt Lake Road in Plymouth. However, in reality, it is not possible to get from 494 to Schmidt, or vice versa, so these intersections on the map need to be removed.
-
-Use a city county layer, both of which can also be found on the MN Geospatial Commons, to clip the roads and intersections layers based on county or city.
-
-Export Roads layer as GeoJSON.
-Export Intersections layer as GeoJSON.
-
-Load both files into GeoPandas.
-
-Warning! My Roads layer for just Ramsey county had about 24,763 road segments, and the Intersections layer for Ramsey had about 13,840 intersection points. The data prep stage (`multithread.py`) for Ramsey County alone took about 25 minutes. The entirety of the dataset (the full seven-county metro area) has about 162,730 road segments and 91,392 intersection points.
+### Runtime and Inefficiences
+With each iteration of the algorithm, many inefficient checks must be made:\
+*None of the following lists are sorted*
+1. The algorithm must first check if the destination intersection has already been visited. If the destination intersection has already been visited, the algorithm will terminate. This is accomplished through a linear search of the `visited_vertices` list mentioned above.
+2. The algorithm must find the intersection with the lowest cost that that has also not yet been visited. This is accomplished through a linear search of the `vertex_array` list. However, it is possible that the intersection with the absolute lowest cost has already been visited. Therefore, when the algorithm finds a new lowest-cost intersection, it must check to see if this intersection has already been visited, which requires a linear search through the `visited_vertices` array.

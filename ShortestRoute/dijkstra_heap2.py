@@ -6,14 +6,14 @@ import math
 import sys
 
 start_time = time.time()
-roads_gpd = gpd.read_file('data/Plymouth_Roads_Prepped.geojson')
-intersections_gpd = gpd.read_file('data/Plymouth_Intersections_Prepped.geojson')
+roads_gpd = gpd.read_file('data/Ramsey_Roads_Prepped.geojson')
+intersections_gpd = gpd.read_file('data/Ramsey_Intersections_Prepped.geojson')
 end_time = time.time()
 print(f'Time to read the geojson files: {end_time - start_time}')
 
 
 source = 0     # an intersection
-dest = 2       # an intersection
+dest = 5000       # an intersection
 
 class Road:
     def __init__(self, index, cost):
@@ -32,73 +32,57 @@ class Vertex:
 Binary Min-Heap Functions (implemented with a list)
 '''
 
-class MinHeap:
-    def __init__(self, heap, size):
-        self.heap = heap        # a list representing a mininum priority binary heap; each element is a Vertex object
-        self.size = size        # the number of elements in the heap
+# i is an index into the list
+def parent(i):
+    return (i - 1) // 2
 
-    # i is an index into the list
-    def parent(self, i):
-        return (i - 1) // 2
+def left_child(i):
+    return i * 2 + 1
 
-    def left_child(self, i):
-        return i * 2 + 1
+def right_child(i):
+    return i * 2 + 2
 
-    def right_child(self, i):
-        return i * 2 + 2
+def swap(heap, i, j):
+    temp = heap[i]
+    heap[i] = heap[j]
+    heap[j] = temp
 
-    def swap(self, i, j):
-        temp = self.heap[i]
-        self.heap[i] = self.heap[j]
-        self.heap[j] = temp
+# move a node up the heap until it is in place
+def heapify(heap, i):
+    parent = parent(i)
+    if (parent >= 0) and (heap[i].cost < heap[parent].cost):
+        swap(heap, i, parent)
 
-    # move a node up the tree until it is in place
-    def heapify(self, i):
-        parent = self.parent(i)
-        if (parent >= 0) and (self.heap[i].cost < self.heap[parent].cost):
-            self.swap(i, parent)
+# move a node down the tree until it is in place
+def min_heapify(heap, i):
+    l = left_child(i)
+    r = right_child(i)
+    smallest = -1
+    if (l < len(heap)) and (heap[l].cost < heap[i].cost):
+        smallest = l
+    else:
+        smallest = i
+    if (r < len(heap)) and (heap[r].cost < heap[smallest].cost):
+        smallest = r
+    if smallest != i:
+        print(heap[i].cost, heap[smallest].cost)
+        swap(heap, i, smallest)
+        print(heap[i].cost, heap[smallest].cost)
+        min_heapify(heap, smallest)
 
-    # move a node down the tree until it is in place
-    def min_heapify(self, i):
-        l = self.left_child(i)
-        r = self.right_child(i)
-        smallest = -1
-        if (l < self.size) and (self.heap[l].cost < self.heap[i].cost):
-            smallest = l
-        else:
-            smallest = i
-        if (r < self.size) and (self.heap[r].cost < self.heap[smallest].cost):
-            smallest = r
-        if smallest != i:
-            # print(self.heap[i].cost, self.heap[smallest].cost)
-            self.swap(i, smallest)
-            # print(self.heap[i].cost, self.heap[smallest].cost)
-            self.min_heapify(smallest)
+def extract_min(heap):
+    min = heap[0]
+    heap[0] = heap[len(heap)]
+    min_heapify(heap, 0)
+    return min
 
-    def extract_min(self):
-        start = time.time()
-        min = self.heap[0]
-        print(f'min: {min.cost}')
-        self.heap[0] = self.heap[self.size - 1]
-        self.size -= 1
-        self.min_heapify(0)
-        # print(self.heap[0].cost)
-        print(f'new min: {self.heap[0].cost}')
-        print()
-        end = time.time()
-        search_time = end - start
-        return min, search_time
-
-    def decrease_key(self, index, key):
-        if key > self.heap[index].cost:
-            pass        # in this case, the new key is larger than the old key
-        else:
-            self.heap[index].cost = key
-            # move heap[i] up the heap until it is in place
-            while (i > 0) and (self.heap[self.parent(i)].cost > self.heap[i].cost):
-                self.swap(self.heap, index, self.parent(i))
-                i = self.parent(i)
-
+def decrease_key(heap, index, key):
+    if key > heap[index].cost:
+        pass    # in this case, the new key is larger than the old key
+    else:
+        heap[index].cost = key
+        # move heap[i] up the heap until it is in place
+        heapify(heap, index)
 
 
 '''
@@ -199,6 +183,9 @@ Return Values:
 '''
 def convert_sec_to_min(seconds):
     return math.ceil(seconds / 60)
+    # min = int(seconds // 60)
+    # sec = int(seconds % 60)
+    # return min, sec
 
 def add_buffer_time(minutes):
     return math.ceil(minutes * 1.1)
@@ -208,7 +195,6 @@ A function to find the shortest path between two intersections.
 
 Parameters:
     graph - a list of Vertex objects that contains all the unvisited vertices in the graph
-    graph - a MaxHeap object
     dest - the index into the intersections Geodataframe of the destination vertex
 
 Return Value:
@@ -222,24 +208,26 @@ def Dijkstra(graph, dest):
     visited_vertices = []       # a list containing all the indices of all the vertices that have been visited so far
     visited_intersections = []  # a list containing all the Vertex objects that have been visited so far
     chosen_roads = []           # a list containing indicies for all the roads for the route
-    global total_search_time
-    total_search_time = 0
+    # global total_search_time
+    # total_search_time = 0
     while dest not in visited_vertices:
+        min_vertex = extract_min(graph)
         # min_vertex, search_time = find_min(graph)        # find the Vertex in the graph with the lowest travel cost
-        min_vertex, search_time = graph.extract_min()
-        total_search_time += search_time
+        # total_search_time += search_time
         # update distances to the neighbor nodes
         neighbors = min_vertex.connections
         for neighbor, road in neighbors.items():
-            print(neighbor.cost)
+            # print(neighbor.cost)
             new_cost = min_vertex.cost + road.travel_time
-            print(min_vertex.cost, road.travel_time)
             if new_cost < neighbor.cost:        # check to see if the new route to reach this node is faster than the previous fastest route
                 neighbor.cost = new_cost
                 neighbor.prev = min_vertex
-                graph.heapify()
-            print(neighbor.cost)
-            print()
+                '''
+                This is a problem! We need to heapify the graph, but we don't know what the index is of the current node.
+                heapify(graph, )
+                '''
+            # print(neighbor.cost)
+            # print()
         
         # add the current node to the set of visited nodes
         visited_vertices.append(min_vertex.index)
@@ -247,24 +235,29 @@ def Dijkstra(graph, dest):
         chosen_roads.append(min_vertex.connections)
 
         # remove the current vertex from the set of unvisited nodes
-        # graph.remove(min_vertex)
+        graph.remove(min_vertex)
     
     return visited_intersections, visited_vertices
     
 start_time = time.time()
 list_of_vertices = initialize_vertices(intersections_gpd, source)
 initialize_ints(intersections_gpd, roads_gpd, list_of_vertices)
+with open('output.txt', 'w') as fp:
+    for vertex in list_of_vertices:
+        fp.write(f'{str(vertex)}')
+        fp.write('\n\n')
+    for vertex in list_of_vertices:
+        fp.write(f'{str(vertex.connections)}\n')
+    # fp.write([str(x) for x in list_of_vertices])
+    # fp.write('\n\n\n')
+    # fp.write([x.connections for x in list_of_vertices])
+
 end_time = time.time()
 print(f'Time to initialize vertices: {end_time - start_time}\n')
 
-min_heap = MinHeap(list_of_vertices, len(list_of_vertices))
-# print(min_heap.heap[0].cost)
-min_heap.heapify(source)
-# print(min_heap.heap[0].cost)
-
 
 start_time = time.time()
-visited_intersections, visited_vertices = Dijkstra(min_heap, dest)
+visited_intersections, visited_vertices = Dijkstra(list_of_vertices, dest)
 end_time = time.time()
 
 # Find the shortest path
@@ -289,7 +282,7 @@ while prev_intersection != None:
 
 print(f'The time it will take to travel this route is approximately {add_buffer_time(minutes)} minutes.')
 print(f'Time taken to run Dijkstra\'s Algorithm: {end_time - start_time} seconds\n')
-print(f'Time spent finding minimum value in list: {total_search_time}')
+# print(f'Time spent finding minimum value in list: {total_search_time}')
 
 
 fig, ax = plt.subplots()

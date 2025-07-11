@@ -3,16 +3,17 @@ import matplotlib.pyplot as plt
 import ast
 import time
 import math
+import sys
 
 start_time = time.time()
-roads_gpd = gpd.read_file('Ramsey_Roads_Prepped.geojson')
-intersections_gpd = gpd.read_file('Ramsey_Intersections_Prepped.geojson')
+roads_gpd = gpd.read_file('data/Ramsey_Roads_Prepped.geojson')
+intersections_gpd = gpd.read_file('data/Ramsey_Intersections_Prepped.geojson')
 end_time = time.time()
 print(f'Time to read the geojson files: {end_time - start_time}')
 
 
-source = 2     # an intersection
-dest = 2000       # an intersection
+source = 0     # an intersection
+dest = 5000       # an intersection
 
 class Road:
     def __init__(self, index, cost):
@@ -25,6 +26,71 @@ class Vertex:
         self.prev = None    # the previous Vertex in the path
         self.index = index      # the index into the intersections_gpd where this vertex is stored
         self.connections = {}   # a dict of Vertex objects that can be reached by this Vertex - i.e. intersections that are one road segment away; keys are Vertex objects and values are Road objects
+
+
+'''
+Binary Min-Heap Functions (implemented with a list)
+'''
+
+class MinHeap:
+    def __init__(self, heap, size):
+        self.heap = heap        # a list representing a mininum priority binary heap; each element is a Vertex object
+        self.size = size        # the number of elements in the heap
+
+    # i is an index into the list
+    def parent(self, i):
+        return (i - 1) // 2
+
+    def left_child(self, i):
+        return i * 2 + 1
+
+    def right_child(self, i):
+        return i * 2 + 2
+
+    def swap(self, i, j):
+        temp = self.heap[i]
+        self.heap[i] = self.heap[j]
+        self.heap[j] = temp
+
+    # move a node up the tree until it is in place
+    def heapify(self, i):
+        parent = self.parent(i)
+        if (parent >= 0) and (self.heap[i].cost < self.heap[parent].cost):
+            self.swap(i, parent)
+
+    # move a node down the tree until it is in place
+    def min_heapify(self, i):
+        l = self.left_child(i)
+        r = self.right_child(i)
+        smallest = -1
+        if (l < self.size) and (self.heap[l].cost < self.heap[i].cost):
+            smallest = l
+        else:
+            smallest = i
+        if (r < self.size) and (self.heap[r].cost < self.heap[smallest].cost):
+            smallest = r
+        if smallest != i:
+            print(self.heap[i].cost, self.heap[smallest].cost)
+            self.swap(i, smallest)
+            print(self.heap[i].cost, self.heap[smallest].cost)
+            self.min_heapify(smallest)
+
+    def extract_min(self):
+        min = self.heap[0]
+        self.heap[0] = self.heap[self.size]
+        self.min_heapify(0)
+        return min
+
+    def decrease_key(self, index, key):
+        if key > self.heap[index].cost:
+            pass        # in this case, the new key is larger than the old key
+        else:
+            self.heap[index].cost = key
+            # move heap[i] up the heap until it is in place
+            while (i > 0) and (self.heap[self.parent(i)].cost > self.heap[i].cost):
+                self.swap(self.heap, index, self.parent(i))
+                i = self.parent(i)
+
 
 '''
 A function to intialize the Vertex objects.
@@ -82,6 +148,7 @@ Return Value:
     min_vertex (Vertex) - the Vertex object that has the lowest travel cost in the list
 '''
 def find_min(list_of_vertices):
+    start = time.time()
     min_value = float("inf")
     min_vertex = None
     n = len(list_of_vertices)
@@ -89,7 +156,9 @@ def find_min(list_of_vertices):
         if list_of_vertices[i].cost < min_value:
             min_value = list_of_vertices[i].cost
             min_vertex = list_of_vertices[i]
-    return min_vertex
+    stop = time.time()
+    search_time = stop - start
+    return min_vertex, search_time
 
 '''
 The 'Intersections' and 'Roads' attributes in the Roads and Intersections Geodataframes, respectively, are represented as a nested list.
@@ -132,7 +201,7 @@ def add_buffer_time(minutes):
 A function to find the shortest path between two intersections.
 
 Parameters:
-    graph - a list containing all the unvisited vertices in the graph; this is the list returned by the initialize() function
+    graph - a list of Vertex objects that contains all the unvisited vertices in the graph
     dest - the index into the intersections Geodataframe of the destination vertex
 
 Return Value:
@@ -146,16 +215,21 @@ def Dijkstra(graph, dest):
     visited_vertices = []       # a list containing all the indices of all the vertices that have been visited so far
     visited_intersections = []  # a list containing all the Vertex objects that have been visited so far
     chosen_roads = []           # a list containing indicies for all the roads for the route
+    global total_search_time
+    total_search_time = 0
     while dest not in visited_vertices:
-        min_vertex = find_min(graph)        # find the Vertex in the graph with the lowest travel cost
-
+        min_vertex, search_time = find_min(graph)        # find the Vertex in the graph with the lowest travel cost
+        total_search_time += search_time
         # update distances to the neighbor nodes
         neighbors = min_vertex.connections
         for neighbor, road in neighbors.items():
+            # print(neighbor.cost)
             new_cost = min_vertex.cost + road.travel_time
-            if new_cost < neighbor.cost:
+            if new_cost < neighbor.cost:        # check to see if the new route to reach this node is faster than the previous fastest route
                 neighbor.cost = new_cost
                 neighbor.prev = min_vertex
+            # print(neighbor.cost)
+            # print()
         
         # add the current node to the set of visited nodes
         visited_vertices.append(min_vertex.index)
@@ -170,8 +244,19 @@ def Dijkstra(graph, dest):
 start_time = time.time()
 list_of_vertices = initialize_vertices(intersections_gpd, source)
 initialize_ints(intersections_gpd, roads_gpd, list_of_vertices)
+with open('output.txt', 'w') as fp:
+    for vertex in list_of_vertices:
+        fp.write(f'{str(vertex)}')
+        fp.write('\n\n')
+    for vertex in list_of_vertices:
+        fp.write(f'{str(vertex.connections)}\n')
+    # fp.write([str(x) for x in list_of_vertices])
+    # fp.write('\n\n\n')
+    # fp.write([x.connections for x in list_of_vertices])
+
 end_time = time.time()
 print(f'Time to initialize vertices: {end_time - start_time}\n')
+
 
 start_time = time.time()
 visited_intersections, visited_vertices = Dijkstra(list_of_vertices, dest)
@@ -199,6 +284,7 @@ while prev_intersection != None:
 
 print(f'The time it will take to travel this route is approximately {add_buffer_time(minutes)} minutes.')
 print(f'Time taken to run Dijkstra\'s Algorithm: {end_time - start_time} seconds\n')
+print(f'Time spent finding minimum value in list: {total_search_time}')
 
 
 fig, ax = plt.subplots()
