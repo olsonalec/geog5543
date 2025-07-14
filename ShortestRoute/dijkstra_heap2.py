@@ -159,7 +159,7 @@ If they were a one-dimensional list, GeoPandas would think that they represent g
 However, when reading these attributes from the dataframe, Python interprets them as strings.
 This is an example: '[[180, 240, 360]]'
 This function converts this string representation of a nested list into a 1-dimensional Python list.
-The example output would be [180, 240, 360], where each value is an integer.
+The example output would be [180, 240, 360], where each element is an integer.
 
 Parameter:
     bad_string - a string representation of a nested list

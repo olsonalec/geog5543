@@ -18,11 +18,15 @@ def calculate_time(speed, distance):
 
 if __name__ == '__main__':
 
-    roads = gpd.read_file('Plymouth_Roads.geojson')
-    intersections = gpd.read_file('Plymouth_Intersections.geojson')
+    roads = gpd.read_file('data/Plymouth_Roads_Prepped.geojson')
+    intersections = gpd.read_file('data/Plymouth_Intersections_Prepped.geojson')
+
+    # print(roads.loc[0].Index)
+    # print(intersections.head())
 
     roads_speedlimit = []
 
+    # Add speedlimits to roads that don't currently have one
     i = 0
     for road in roads.itertuples():
         speedlimit = road.ROUTESPEED
@@ -30,6 +34,7 @@ if __name__ == '__main__':
             roads.loc[i, 'ROUTESPEED'] = 30
         i += 1
 
+    # Calculate approximate time to travel each road segment
     roads_time = [] # will store the amount of time it takes to travel each road segment
     for road in roads.itertuples():
         # road_speed = road.Speedlimit    # Plymouth
@@ -42,41 +47,21 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    # roads_newlist = list(np.zeros(intersections.shape[0]))
-
-    # intersections['Roads'] = roads_newlist
-
-    # print(intersections.head())
-
     pandarallel.initialize(progress_bar=True)
-    intersections['Roads'] = intersections.parallel_apply(data_prep.map_function, axis=1, args=(roads,))
 
-    # intersections['Roads'] = intersections.apply(data_prep.map_function, axis=1, args=(roads,))
+    # Find the roads that intersect with a given intersection
+    # intersections['Roads'] = intersections.parallel_apply(data_prep.map_function, axis=1, args=(roads,))
 
-    roads['Intersections'] = roads.parallel_apply(data_prep.map_function2, axis=1, args=(intersections,))
+    # Find the intersections that intersection with a given road
+    # roads['Intersections'] = roads.parallel_apply(data_prep.map_function2, axis=1, args=(intersections,))
 
+    # Find the intersections that are one road segment away from a given intersection
+    intersections['NeighboringIntersections'] = intersections.parallel_apply(data_prep.map_function3, axis=1, args=(roads,))
 
     # Calculating the speedlimit and time to travel could also be parallelized
-    '''
-    Only for Plymouth
-    roads_speedlimit = []       # will store the speed limit on each road segment
-    for road in roads.itertuples():
-        road_type = road.ROUTE_SI_1
-        if road_type in ['U.S.', 'State', 'Interstate']:
-            roads_speedlimit.append(60)
-        elif road_type in ['County']:
-            roads_speedlimit.append(45)
-        elif road_type in ['Municipal', 'Signed, Other', 'Not Signed or Not Applicable']:
-            roads_speedlimit.append(30)
-    
-    speedlimit_df = gpd.GeoDataFrame(pd.Series(roads_speedlimit))
-    roads['Speedlimit'] = speedlimit_df
-    '''
-
-
 
     end_time = time.time()
     print(f'Total time: {end_time - start_time}')
 
-    intersections.to_file("Plymouth_Intersections_Prepped.geojson")
-    roads.to_file("Plymouth_Roads_Prepped.geojson")
+    intersections.to_file("data/Plymouth_Intersections_Prepped2.geojson")
+    roads.to_file("data/Plymouth_Roads_Prepped2.geojson")

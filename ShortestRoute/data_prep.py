@@ -1,7 +1,7 @@
 import geopandas as gpd
 import pandas as pd
-import time
-from multiprocessing import Pool
+import ast
+import sys
 
 def mph_to_ms(speed):
     # converts mph to m/s
@@ -12,15 +12,32 @@ def calculate_time(speed, distance):
     speed_in_ms = mph_to_ms(speed)
     return distance / speed_in_ms
 
+'''
+The 'Intersections' and 'Roads' attributes in the Roads and Intersections Geodataframes, respectively, are represented as a nested list.
+If they were a one-dimensional list, GeoPandas would think that they represent geometry, which they don't.
+However, when reading these attributes from the dataframe, Python interprets them as strings.
+This is an example: '[[180, 240, 360]]'
+This function converts this string representation of a nested list into a 1-dimensional Python list.
+The example output would be [180, 240, 360], where each value is an integer.
 
-roads = gpd.read_file(r"Plymouth_Roads.geojson")
+Parameter:
+    bad_string - a string representation of a nested list
 
-intersections = gpd.read_file(r"Plymouth_Intersections.geojson")
+Return Value:
+    new_list[0] - a Python list representation of the input
+'''
+def convert_string_to_list(bad_string):
+    new_list = ast.literal_eval(bad_string)
+    return new_list[0]
 
-print(roads.head())
-print(intersections.head())
+# roads = gpd.read_file(r"Plymouth_Roads.geojson")
 
+# intersections = gpd.read_file(r"Plymouth_Intersections.geojson")
 
+# print(roads.head())
+# print(intersections.head())
+
+# Find the roads that intersect with a given intersection
 def map_function(intersection, road_geodataframe):
     indices = [[]]
     for road in road_geodataframe.itertuples():
@@ -28,6 +45,7 @@ def map_function(intersection, road_geodataframe):
             indices[0].append(road.Index)
     return indices
 
+# Find the intersections that intersection with a given road
 def map_function2(road, intersection_geodataframe):
     indices = [[]]
     for intersection in intersection_geodataframe.itertuples():
@@ -35,71 +53,15 @@ def map_function2(road, intersection_geodataframe):
             indices[0].append(intersection.Index)
     return indices
 
-'''
-start_time = time.time()
-
-
-roads_newlist = [] # a list of roads that connect to each intersections
-                    # this is a list of lists; each outer element is an intersection
-                    # each inner element is an index into the 'roads' GeoDataFrame
-for intersection in intersections.itertuples():
-    indices = [[]]  # this needs to be a nested list because if it was a 1D list, GeoPandas would think that it's storing coordinate data, which it's not
-    for road in roads.itertuples():
-        if intersection.geometry.intersects(road.geometry):
-            indices[0].append(road.Index)
-    roads_newlist.append(indices)
-
-
-newDF = gpd.GeoDataFrame(pd.Series(roads_newlist))
-intersections['Roads'] = newDF
-print(intersections.head())
-
-
-intersections_newlist = [] # a list of roads that connect to each intersections
-                    # this is a list of lists; each outer element is an intersection
-                    # each inner element is an index into the 'roads' GeoDataFrame
-for road in roads.itertuples():
-    indices = [[]]      # this needs to be a nested list because if it was a 1D list, GeoPandas would think that it's storing coordinate data, which it's not
-    for intersection in intersections.itertuples():
-        if road.geometry.intersects(intersection.geometry):
-            indices[0].append(intersection.Index)
-    intersections_newlist.append(indices)
-
-
-
-roads_speedlimit = []       # will store the speed limit on each road segment
-for road in roads.itertuples():
-    road_type = road.ROUTE_SI_1
-    if road_type in ['U.S.', 'State', 'Interstate']:
-        roads_speedlimit.append(60)
-    elif road_type in ['County']:
-        roads_speedlimit.append(45)
-    elif road_type in ['Municipal', 'Signed, Other', 'Not Signed or Not Applicable']:
-        roads_speedlimit.append(30)
-
-road_intersection_df = gpd.GeoDataFrame(pd.Series(intersections_newlist))
-speedlimit_df = gpd.GeoDataFrame(pd.Series(roads_speedlimit))
-roads['Intersections'] = road_intersection_df
-roads['Speedlimit'] = speedlimit_df
-
-roads_time = [] # will store the amount of time it takes to travel each road segment
-for road in roads.itertuples():
-    road_speed = road.Speedlimit
-    road_distance = road.Shape_Length
-    roads_time.append(calculate_time(road_speed, road_distance))
-
-roads_time_df = gpd.GeoDataFrame(pd.Series(roads_time))
-roads['TimeToTravel'] = roads_time_df
-
-print(roads.head())
-
-
-
-
-intersections.to_file("intersections_prepped.geojson")
-roads.to_file("roads_prepped.geojson")
-
-
-end_time = time.time()
-print(f"Total time: {end_time - start_time}")
-'''
+# Find the intersections that are one road segment away from the current intersection
+def map_function3(intersection, road_gdf):
+    connecting_intersections = [[]]
+    roads = intersection['Roads']
+    roads = convert_string_to_list(roads)
+    for road in roads:
+        new_intersections = road_gdf.loc[road]['Intersections']
+        new_intersections = convert_string_to_list(new_intersections)
+        for int in new_intersections:
+            if (int != intersection.name) and (int not in connecting_intersections[0]):
+                connecting_intersections[0].append((int, float(road_gdf.loc[road]['TimeToTravel'])))
+    return connecting_intersections

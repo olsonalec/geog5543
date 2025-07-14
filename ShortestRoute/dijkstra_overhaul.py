@@ -8,7 +8,7 @@ import sys
 
 start_time = time.time()
 roads_gpd = gpd.read_file('data/Plymouth_Roads_Prepped.geojson')
-intersections_gpd = gpd.read_file('data/Plymouth_Intersections_Prepped.geojson')
+intersections_gpd = gpd.read_file('data/Plymouth_Intersections_Prepped2.geojson')
 end_time = time.time()
 print(f'Time to read the geojson files: {end_time - start_time}')
 
@@ -26,6 +26,7 @@ class Vertex:
         self.cost = float("inf")        # the total cost of the path to reach this vertex
         self.prev = None    # the previous Vertex in the path
         self.index = index      # the index into the intersections_gpd where this vertex is stored
+        self.connections2 = []
         self.connections = {}   # a dict of Vertex objects that can be reached by this Vertex - i.e. intersections that are one road segment away; keys are Vertex objects and values are Road objects
 
 
@@ -43,6 +44,7 @@ def initialize_vertices(gdf, source):
     vertex_list = []        # a list to store a Vertex object associated with each intersection
     for intersection in gdf.itertuples():
         index = intersection.Index
+        new_vertex.connections2 = convert_string_to_list(intersection.NeighboringIntersections)
         new_vertex = Vertex(index)
         vertex_list.append(new_vertex)
 
@@ -103,7 +105,7 @@ If they were a one-dimensional list, GeoPandas would think that they represent g
 However, when reading these attributes from the dataframe, Python interprets them as strings.
 This is an example: '[[180, 240, 360]]'
 This function converts this string representation of a nested list into a 1-dimensional Python list.
-The example output would be [180, 240, 360], where each value is an integer.
+The example output would be [180, 240, 360], where each element is an integer.
 
 Parameter:
     bad_string - a string representation of a nested list

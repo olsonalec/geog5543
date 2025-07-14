@@ -6,14 +6,14 @@ import math
 import sys
 
 start_time = time.time()
-roads_gpd = gpd.read_file('data/Ramsey_Roads_Prepped.geojson')
-intersections_gpd = gpd.read_file('data/Ramsey_Intersections_Prepped.geojson')
+roads_gpd = gpd.read_file('data/Plymouth_Roads_Prepped.geojson')
+intersections_gpd = gpd.read_file('data/Plymouth_Intersections_Prepped.geojson')
 end_time = time.time()
 print(f'Time to read the geojson files: {end_time - start_time}')
 
 
 source = 0     # an intersection
-dest = 5000       # an intersection
+dest = 2000       # an intersection
 
 class Road:
     def __init__(self, index, cost):
@@ -166,7 +166,7 @@ If they were a one-dimensional list, GeoPandas would think that they represent g
 However, when reading these attributes from the dataframe, Python interprets them as strings.
 This is an example: '[[180, 240, 360]]'
 This function converts this string representation of a nested list into a 1-dimensional Python list.
-The example output would be [180, 240, 360], where each value is an integer.
+The example output would be [180, 240, 360], where each element is an integer.
 
 Parameter:
     bad_string - a string representation of a nested list
